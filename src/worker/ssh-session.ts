@@ -127,7 +127,7 @@ export class SSHSession {
     this.kexInitLocal = KEXInitBuilder.build();
     console.log('[KEX] Built KEXINIT, length:', this.kexInitLocal.length);
     
-    const packet = SSHPacketBuilder.build(
+    const packet = await SSHPacketBuilder.build(
       this.kexInitLocal, 8, null, this.seqNumSend++
     );
     console.log('[KEX] Sending KEXINIT packet, length:', packet.length);
@@ -144,7 +144,7 @@ export class SSHSession {
     console.log('[KEX] Raw public key exported, length:', this.ecdhRawPublicKey.length);
 
     const ecdhInit = ECDHKeyExchange.buildInit(this.ecdhRawPublicKey);
-    const ecdhPacket = SSHPacketBuilder.build(
+    const ecdhPacket = await SSHPacketBuilder.build(
       ecdhInit, 8, null, this.seqNumSend++
     );
     console.log('[KEX] Sending ECDH_INIT packet, length:', ecdhPacket.length);
@@ -162,10 +162,10 @@ export class SSHSession {
     const blockSize = this.decryptCipher ? 16 : 8;
 
     while (true) {
-      const packet = this.packetParser.nextPacket(
+      const packet = await this.packetParser.nextPacket(
         blockSize,
         this.decryptCipher
-          ? (data, seq) => this.decryptCipher!.decrypt(data, seq) as any
+          ? (data, seq) => this.decryptCipher!.decrypt(data, seq)
           : (data) => data,
         !!this.decryptCipher
       );
@@ -214,7 +214,7 @@ export class SSHSession {
         console.log('[KEX] Received NEWKEYS from server');
 
         const newKeys = new Uint8Array([SSH_MSG_NEWKEYS]);
-        const packet = SSHPacketBuilder.build(
+        const packet = await SSHPacketBuilder.build(
           newKeys, 8, null, this.seqNumSend++
         );
         await this.writeSocket(packet);
@@ -292,9 +292,9 @@ export class SSHSession {
     );
     console.log('[AUTH] Auth request built, length:', authRequest.length);
 
-    const packet = SSHPacketBuilder.build(
+    const packet = await SSHPacketBuilder.build(
       authRequest, 16,
-      (data, seq) => this.encryptCipher!.encrypt(data, seq) as any,
+      (data, seq) => this.encryptCipher!.encrypt(data, seq),
       this.seqNumSend++
     );
     await this.writeSocket(packet);
@@ -426,9 +426,9 @@ export class SSHSession {
       throw new Error('Encryption not initialized');
     }
 
-    const encrypted = SSHPacketBuilder.build(
+    const encrypted = await SSHPacketBuilder.build(
       payload, 16,
-      (data, seq) => this.encryptCipher!.encrypt(data, seq) as any,
+      (data, seq) => this.encryptCipher!.encrypt(data, seq),
       this.seqNumSend++
     );
     await this.writeSocket(encrypted);
